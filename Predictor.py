@@ -33,7 +33,13 @@ def parse_array(a):
     return list(ast.literal_eval(a))
 
 @st.cache_resource
-DATA_DIR = Path(__file__).parent / "data"
+ROOT = Path(__file__).resolve().parent     # repo root (where Predictor.py lives)
+DATA_DIR = ROOT / "data"                   # repo_root/data
+
+# sanity check (helps when deployed)
+if not DATA_DIR.exists():
+    st.stop()
+    raise FileNotFoundError(f"Missing folder: {DATA_DIR}")
 def load_data():
     train_data = np.load(DATA_DIR / "train_data.npy")   # shape (N, 784) or (N, 28, 28)
     train_labels = np.load(DATA_DIR / "train_labels.npy")
