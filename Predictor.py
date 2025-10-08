@@ -8,6 +8,12 @@ from pathlib import Path
 st.set_page_config(page_title="Number Predictor", layout="wide")
 st.title("KNN Model to predict hand-drawn digits")
 
+ROOT = Path(__file__).resolve().parent           # repo root (where Predictor.py lives)
+DATA_DIR = ROOT / "data"                         # repo_root/data
+
+if not DATA_DIR.exists():
+    st.error(f"Missing folder: {DATA_DIR}")
+    st.stop()
 
 # ---------- KNN helpers ----------
 def distance(p1, p2):
@@ -33,13 +39,6 @@ def parse_array(a):
     return list(ast.literal_eval(a))
 
 @st.cache_resource
-ROOT = Path(__file__).resolve().parent     # repo root (where Predictor.py lives)
-DATA_DIR = ROOT / "data"                   # repo_root/data
-
-# sanity check (helps when deployed)
-if not DATA_DIR.exists():
-    st.stop()
-    raise FileNotFoundError(f"Missing folder: {DATA_DIR}")
 def load_data():
     train_data = np.load(DATA_DIR / "train_data.npy")   # shape (N, 784) or (N, 28, 28)
     train_labels = np.load(DATA_DIR / "train_labels.npy")
