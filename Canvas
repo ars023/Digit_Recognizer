@@ -1,0 +1,243 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Digit Canvas — 28×28, Black, Dense</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        :root {
+            color-scheme: light dark;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, Arial, sans-serif;
+            margin: 20px;
+        }
+
+        .row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 6px 10px;
+            border-radius: 8px;
+            border: 1px solid #bbb;
+            background: #f6f6f6;
+            cursor: pointer;
+        }
+
+        .btn.primary {
+            background: #2563eb;
+            color: #fff;
+            border-color: #1e40af;
+        }
+
+        .hint {
+            font-size: 13px;
+            color: #666;
+        }
+
+        /* Make tiny 28×28 look big and pixel-perfect */
+        #digit {
+            width: 280px;
+            height: 280px;
+            /* 10× visual zoom */
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            border: 1px dashed #bbb;
+            border-radius: 10px;
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Digit Canvas — 28×28</h1>
+
+    <!-- TRUE 28×28 drawing surface -->
+    <canvas id="digit" width="28" height="28"></canvas>
+
+    <div class="row" style="margin-top:12px">
+        <button class="btn primary" id="clear">Clear</button>
+        <button class="btn primary" id="popup">Popup Preview</button>
+        <button class="btn primary" id="copyFloat">Copy as Python (float [0..1])</button>
+        <!--<button class="btn primary" id="copyUint8">Copy as Python (uint8 0..255)</button> -->
+    </div>
+
+    <p class="hint" style="margin-top:8px">
+        Draw directly on a 28×28 grid. Black ink, thinnest line. Extra pixel hits make initial strokes darker.
+        Use the “Copy as Python …” buttons and paste the array straight into your script.
+    </p>
+
+    <script>
+        const canvas = document.getElementById('digit');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+        // --- Initialize white background ---
+        function reset() {
+            ctx.save();
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.restore();
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, 28, 28);
+        }
+        reset();
+
+        // --- Stroke setup: black, smallest thickness, high density ---
+        const INK = '#000000';
+        const LINE_W = 1;              // smallest thickness
+        const STEP = 0.25;             // finer stepping for denser coverage
+        const EXTRA_PIXEL_HITS = true;  // reinforce darkness with per-step dots
+
+        let drawing = false;
+        let last = null;
+
+        function cssToCanvasXY(e) {
+            const r = canvas.getBoundingClientRect();
+            const t = e.touches?.[0];
+            const cx = t ? t.clientX : e.clientX;
+            const cy = t ? t.clientY : e.clientY;
+            const xCss = cx - r.left, yCss = cy - r.top;
+            // Map CSS coords to 28×28 pixel coords (0..27)
+            const x = Math.max(0, Math.min(27.999, (xCss / r.width) * 28));
+            const y = Math.max(0, Math.min(27.999, (yCss / r.height) * 28));
+            return { x, y };
+        }
+
+        function begin(e) {
+            e.preventDefault();
+            drawing = true;
+            last = cssToCanvasXY(e);
+        }
+
+        function end(e) {
+            e?.preventDefault?.();
+            drawing = false;
+            last = null;
+        }
+
+        function darkPixelAt(x, y) {
+            // Hit the exact pixel to increase darkness (no antialias)
+            ctx.fillStyle = INK;
+            ctx.fillRect(Math.floor(x), Math.floor(y), 1, 1);
+        }
+
+        function draw(e) {
+            if (!drawing) return;
+            e.preventDefault();
+            const p = cssToCanvasXY(e);
+            const dx = p.x - last.x, dy = p.y - last.y;
+            const dist = Math.hypot(dx, dy);
+            const steps = Math.max(1, Math.ceil(dist / STEP));
+
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.globalAlpha = 1.0;
+            ctx.strokeStyle = INK;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.lineWidth = LINE_W;
+
+            let px = last.x, py = last.y;
+            for (let i = 1; i <= steps; i++) {
+                const t = i / steps;
+                const xi = last.x + dx * t;
+                const yi = last.y + dy * t;
+
+                // crisp 1px lines on a pixel grid: align to 0.5 offsets
+                ctx.beginPath();
+                ctx.moveTo(px + 0.5, py + 0.5);
+                ctx.lineTo(xi + 0.5, yi + 0.5);
+                ctx.stroke();
+
+                if (EXTRA_PIXEL_HITS) {
+                    darkPixelAt(xi, yi); // reinforce darkness at each step
+                }
+                px = xi; py = yi;
+            }
+            last = p;
+        }
+
+        canvas.addEventListener('mousedown', begin);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', end);
+        canvas.addEventListener('mouseleave', end);
+        canvas.addEventListener('touchstart', begin, { passive: false });
+        canvas.addEventListener('touchmove', draw, { passive: false });
+        canvas.addEventListener('touchend', end);
+
+        document.getElementById('clear').onclick = reset;
+
+        document.getElementById('popup').onclick = () => {
+            const url = canvas.toDataURL('image/png');
+            const w = window.open('', '_blank', 'width=360,height=420');
+            if (!w) { alert('Popup blocked. Allow popups for this page.'); return; }
+            w.document.title = '28×28 Preview';
+            w.document.body.style.margin = '0';
+            w.document.body.style.background = '#222';
+            w.document.body.innerHTML = `
+          <div style="display:flex;align-items:center;justify-content:center;height:100vh;">
+            <img src="${url}" style="image-rendering:pixelated;width:280px;height:280px;background:#fff;border-radius:8px"/>
+          </div>
+        `;
+        };
+
+        function readFloatArray() {
+            const d = ctx.getImageData(0, 0, 28, 28).data;
+            const arr = [];
+            for (let y = 0; y < 28; y++) {
+                const row = [];
+                for (let x = 0; x < 28; x++) {
+                    const i = (y * 28 + x) * 4;
+                    const r = d[i], g = d[i + 1], b = d[i + 2];
+                    const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                    const ink = (255 - luma) / 255; // 1=black, 0=white
+                    row.push(Math.max(0, Math.min(1, ink)));
+                }
+                arr.push(row);
+            }
+            return arr;
+        }
+
+        // Convert to uint8 0..255 (MNIST-like)
+        function toUint8(arr) {
+            const out = [];
+            for (let y = 0; y < 28; y++) {
+                const row = new Array(28);
+                for (let x = 0; x < 28; x++) {
+                    row[x] = Math.round(arr[y][x] * 255);
+                }
+                out.push(row);
+            }
+            return out;
+        }
+
+        async function copyText(text) {
+            try {
+                await navigator.clipboard.writeText(text);
+                alert('Copied to clipboard!');
+            } catch {
+                // Fallback: show prompt so user can copy manually
+                window.prompt('Copy to clipboard:', text.slice(0, 2000) + (text.length > 2000 ? ' ...' : ''));
+            }
+        }
+
+        // Copy as Python float array
+        document.getElementById('copyFloat').onclick = async () => {
+            const arr = readFloatArray();
+            const flat = arr
+                .flat()
+                .map(v => Math.max(0, Math.min(255, Math.round(v * 255))));
+            //const py = `import numpy as np
+            //sample = np.array(${JSON.stringify(flat)}, dtype=float).reshape(1, 784)`;
+            const py = `${JSON.stringify(flat)}`;
+            await copyText(py);
+        };
+    </script>
+</body>
+
+</html>
