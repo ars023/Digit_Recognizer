@@ -3,6 +3,7 @@ import plotly.express as px
 import streamlit as st
 import ast
 import matplotlib.pyplot as plt 
+from pathlib import Path
 
 st.set_page_config(page_title="Number Predictor", layout="wide")
 st.title("KNN Model to predict hand-drawn digits")
@@ -32,11 +33,12 @@ def parse_array(a):
     return list(ast.literal_eval(a))
 
 @st.cache_resource
+DATA_D = Path(__file__).parent / "data"
 def load_data():
-    train_data = np.load('MNIST/train_data.npy')   # shape (N, 784) or (N, 28, 28)
-    train_labels = np.load('MNIST/train_labels.npy')
-    test_data = np.load('MNIST/test_data.npy')     # optional, used if you want to compare
-    test_labels = np.load('MNIST/test_labels.npy')
+    train_data = np.load(DATA_DIR / "train_data.npy")   # shape (N, 784) or (N, 28, 28)
+    train_labels = np.load(DATA_DIR / "train_labels.npy")
+    test_data = np.load(DATA_DIR / "test_data.npy")     # optional, used if you want to compare
+    test_labels = np.load(DATA_DIR / "test_labels.npy")
     # Flatten if needed:
     if train_data.ndim == 3:
         train_data = train_data.reshape(len(train_data), -1)
