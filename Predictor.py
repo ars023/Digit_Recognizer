@@ -60,36 +60,34 @@ st.sidebar.title("Parameters")
 k = st.sidebar.number_input("Number of Neighbors (K)", min_value=1, value=3, max_value=10, step=1)
 
 
-if (!input){
-    st.markdown("Please provide a vector representing your number!")
-}
-else{
+if not input.strip():
+    st.info("Please provide a vector representing your number!")
+    st.stop()
     #st.markdown(f"**Weight (slope):** {parse_array(input)}")
-    sample = np.array(parse_array(input), dtype=float).reshape(1, 784)
-    pred, indices = knn(train_data, train_labels, sample, k)
-    
-    
-    st.write("### Your drawing (downsampled to 28×28):")
-    
-    # sample: shape (1, 784) or (784,)
-    arr = sample.reshape(-1)            # flatten if needed
-    img = arr.reshape(28, 28)
-    
-    # If your convention is 1 = black, 0 = white, invert for display:
-    img_disp = img                # comment this out if 0=black,1=white
-    
-    st.image(img_disp, width=500, clamp=True)  # clamp=True for float [0,1]
-    
-    
-    st.markdown(f"**Prediction:** {pred[0]}")
-    
-    st.write("### Nearest neighbors:")
-    cols = st.columns(k)
-    for i, idx in enumerate(indices):
-        with cols[i]:
-            st.image(train_data[idx].reshape(28, 28), width=100, clamp=True)
-            st.caption(f"Label: {train_labels[idx]}")
-}
+pred, indices = knn(train_data, train_labels, sample, k)
+
+
+st.write("### Your drawing (downsampled to 28×28):")
+
+# sample: shape (1, 784) or (784,)
+arr = sample.reshape(-1)            # flatten if needed
+img = arr.reshape(28, 28)
+
+# If your convention is 1 = black, 0 = white, invert for display:
+img_disp = img                # comment this out if 0=black,1=white
+
+st.image(img_disp, width=500, clamp=True)  # clamp=True for float [0,1]
+
+
+st.markdown(f"**Prediction:** {pred[0]}")
+
+st.write("### Nearest neighbors:")
+cols = st.columns(k)
+for i, idx in enumerate(indices):
+    with cols[i]:
+        st.image(train_data[idx].reshape(28, 28), width=100, clamp=True)
+        st.caption(f"Label: {train_labels[idx]}")
+
 st.markdown("---")
 
 
