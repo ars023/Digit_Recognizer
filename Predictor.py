@@ -33,7 +33,7 @@ def parse_array(a):
     return list(ast.literal_eval(a))
 
 @st.cache_resource
-DATA_D = Path(__file__).parent / "data"
+DATA_DIR = Path(__file__).parent / "data"
 def load_data():
     train_data = np.load(DATA_DIR / "train_data.npy")   # shape (N, 784) or (N, 28, 28)
     train_labels = np.load(DATA_DIR / "train_labels.npy")
